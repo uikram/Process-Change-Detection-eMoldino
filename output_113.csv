@@ -1,0 +1,3 @@
+moldId,counterId,dataAccId,similarityMetric,similarityMetricHr,procChanged,measurementDate
+EM-PL-TM103,EMA2252M10022,28848,0.94388,0.809778,0,Timestamp('08:00:')
+EM-PL-TM103,EMA2252M10022,28849,0.593944,0.809778,0,Timestamp('08:00:')

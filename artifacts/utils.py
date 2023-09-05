@@ -51,7 +51,7 @@ def get_hourly_similarity_metric(
             sim_metric_hr = unique_sim_metric_hr[0]
         else:
             sim_metric_hr = None
-
+        # sim_metric_hr_all[hour] = 0.988
         sim_metric_hr_all[hour] = sim_metric_hr
 
     return sim_metric_hr_all
@@ -310,3 +310,65 @@ def get_n_neighbor_records(
         data_neighbor.append(neighbor_record)
 
     return data_neighbor
+
+def check_data_valid(
+    frame,
+    minimum_time_threshold=1,
+    avg_acc_threshold=6,
+    std_acc_threshold=3,
+    hourly_invalidity_threshold=0.90,
+):
+    """
+    Predict the validity of data based on the average method.
+
+    This function calculates the validity label and invalidity ratio of given data based on various thresholds.
+
+    Args:
+        frame (DataFrame): Input DataFrame containing hour's data.
+        minimum_time_threshold (float, optional): Absolute time threshold in seconds. Defaults to 3.
+        avg_acc_threshold (float, optional): Strict Gaussian gap threshold. Defaults to 6.
+        std_acc_threshold (float, optional): Standard deviation threshold. Defaults to 3.
+        hourly_invalidity_threshold (float, optional): Hourly invalidity ratio threshold. Defaults to 0.90.
+
+    Returns:
+        tuple: A tuple containing the label ('Valid' or 'Invalid') and the invalidity ratio.
+
+    Examples:
+        >>> import pandas as pd
+        >>> frame = pd.DataFrame({
+        ...     'shot_no': [1, 1, 2, 2, 3, 3],
+        ...     'acc_index': [0.5, 0.6, 0.8, 1.2, 2.0, 2.1],
+        ...     'time': [10, 20, 5, 15, 8, 18]
+        ... })
+        >>> label, invalidity_ratio = check_data_valid(frame)
+        >>> label
+        'Invalid'
+        >>> round(invalidity_ratio, 2)
+        1.0
+    """
+    # Group the Hours Data by the number of accelration records or number of shots.
+    grouped_shots = frame.groupby(
+        "shot_no"
+    )  # Here 'shot no' is the column name of IDs of accelration records.
+    # Compute the Average and Standard deviation of Acceration Magnitude of Accleration Records
+    grouped_shots_acc_mean = grouped_shots["acc_index"].mean()
+    grouped_shots_acc_std = grouped_shots["acc_index"].std()
+    grouped_shots_max_time = grouped_shots["time"].max()
+    shot_no_valid = grouped_shots_acc_mean.index
+    # Check for Type-1 and Type-2 invalid cases
+    # Note: The third condition is imposed for undecided cases
+    #       where we are not sure that why signal length is so short
+    status_conditions = (
+        (grouped_shots_acc_mean >= std_acc_threshold)
+        & (grouped_shots_acc_std >= avg_acc_threshold)
+        & (grouped_shots_max_time >= minimum_time_threshold)
+    )
+    # Label Each Shot as invalid or valid
+    status = np.where(status_conditions, "Valid", "Invalid")
+    invalid_rows = np.count_nonzero(status == "Invalid")
+    total_shots = len(shot_no_valid)
+    invalidity_ratio = invalid_rows / total_shots
+    # To label the completed hour as invalid, the following condition is asserted
+    label = "Invalid" if invalidity_ratio >= hourly_invalidity_threshold else "Valid"
+    # Return the hour's label and how many shots were invalid in an hour.
+    return label, invalidity_ratio

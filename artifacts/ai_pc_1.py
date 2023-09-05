@@ -18,7 +18,7 @@ from artifacts.acceleration import (
     calculate_avg_acc_feature,
 )
 from artifacts.utils import (
-    get_hourly_similarity_metric,
+    
     extract_hourly_data,
     cos_similarity_metric,
     generate_hrs_template,
@@ -34,6 +34,53 @@ logger = logging.getLogger("AI")
 
 # Decimal place for similarity metrics
 DECIMAL_PLACE = 6
+
+
+from artifacts.acceleration import AccRecord
+from typing import Optional, Union, Literal
+import logging
+logger = logging.getLogger("AI")
+def get_hourly_similarity_metric(
+    records_all: list[AccRecord],
+) -> dict[str, Optional[float]]:
+    """Get the hourly similarity metric from previous inferences
+    Args:
+        records_all (list[AccRecord]): list of  AccRecord instances
+    Returns:
+        dict[str : Optional[float]]: hourly sim. metric with the hr
+                                     as key in the dictionary
+    """
+    unique_hours = list({record.measurement_hour for record in records_all})
+    unique_hours = sorted(unique_hours, reverse=False)
+
+    # get sim_metric_hr from previous inference
+    sim_metric_hr_all = {}
+    for hour in unique_hours:
+        unique_sim_metric_hr = list(
+            {
+                record.sim_metric_hr
+                for record in records_all
+                if (record.measurement_hour) == hour
+                and (record.sim_metric_hr is not None)
+            }
+        )
+        # There should only be one unique similarity metric
+        if len(unique_sim_metric_hr) > 1:
+            logger.error(
+                "Warning: similarityMetricHr has multiple values for single hour",
+                stack_info=False,
+            )
+            sim_metric_hr = unique_sim_metric_hr[0]
+
+        elif len(unique_sim_metric_hr) == 1:
+            sim_metric_hr = unique_sim_metric_hr[0]
+        else:
+            sim_metric_hr = None
+        sim_metric_hr_all[hour] = 0.988 #Dummy Value
+        # sim_metric_hr_all[hour] = sim_metric_hr
+
+    return sim_metric_hr_all
+
 
 
 def get_hourly_summary(
@@ -375,7 +422,6 @@ def main_proc_change(
                     max_hr_dist=2,
                     n=N_PREV_RECS,
                     orientation="before",
-
                 )
                 # Append the current record to the previous two hours data
                 acc_data_comb.append(record)

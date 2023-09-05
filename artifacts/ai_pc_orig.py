@@ -7,7 +7,6 @@ import numpy as np
 from typing import Optional
 import logging
 import math
-from datetime import datetime
 
 from artifacts.acceleration import (
     Acceleration,
@@ -318,7 +317,6 @@ def main_proc_change(
     # Get relevant data
     data: dict = fetchResult["data"]
     start_hr: str = data["startHour"]
-    measurement_date: str = data["measurementDate"]
     # Create ordered list of each acc record with proper formatting
     records_all = parse_individual_records(
         fetchResult=fetchResult,
@@ -375,7 +373,6 @@ def main_proc_change(
                     max_hr_dist=2,
                     n=N_PREV_RECS,
                     orientation="before",
-
                 )
                 # Append the current record to the previous two hours data
                 acc_data_comb.append(record)
@@ -414,6 +411,7 @@ def main_proc_change(
                     "similarityMetricHr": round(sim_met_curr_hr, DECIMAL_PLACE),
                     "procChanged": proc_change_val,
                     "avgAccVectorHr": avg_acc_feature_curr,
+                    # "measurementDate": measurement_date,
                 }
                 records_processed.append(result_to_append)
 
@@ -426,22 +424,7 @@ def main_proc_change(
     similarityMetricHr = [record["similarityMetricHr"] for record in records_processed]
     procChanged = [record["procChanged"] for record in records_processed]
     avgAccVectorHr = [record["avgAccVectorHr"] for record in records_processed]
-
-    # print(data)
-    # print(dataAccId)
-
-    dataAccId_to_measurementDate = dict(zip(data['dataAccId'], measurement_date))
-    measurementDate_remaining = [dataAccId_to_measurementDate[data_id] for data_id in dataAccId]
-
-    formatted_dates = []
-
-    for timestamp in measurementDate_remaining:
-        dt_obj = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
-
-        formatted_date = dt_obj.strftime("Timestamp('%H:00:')")
-    
-        formatted_dates.append(formatted_date)
-
+    # measurement_date = [record["measurementDate"] for record in records_processed]
 
     model_response = {
         "moldId": data["moldId"],
@@ -450,7 +433,7 @@ def main_proc_change(
         "similarityMetric": similarityMetric,
         "similarityMetricHr": similarityMetricHr,
         "procChanged": procChanged,
-        "measurementDate": formatted_dates,
+        # "measurementDate": measurement_date,
     }
 
     return model_response
